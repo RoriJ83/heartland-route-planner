@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heartland POS - Daily Route Planner</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9fafb;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+        .lucide {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+            .desktop-grid {
+                grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+            }
+            .mobile-stack {
+                display: block !important;
+            }
+            .mobile-stack > * {
+                margin-bottom: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+        
+        // Simple Lucide icon components
+        const Calendar = ({ className, size = 24 }) => (
+            <svg className={`lucide ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+        );
+        
+        const Clock = ({ className, size = 24 }) => (
+            <svg className={`lucide ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12,6 12,12 16,14"/>
+            </svg>
+        );
+        
+        const MapPin = ({ className, size = 24 }) => (
+            <svg className={`lucide ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+            </svg>
+        );
+        
+        const Navigation = ({ className, size = 24 }) => (
+            <svg className={`lucide ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                <polygon points="3,11 22,2 13,21 11,13 3,11"/>
+            </svg>
+        );
+        
+        const Utensils = ({ className, size = 24 }) => (
+            <svg className={`lucide ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/>
+                <path d="M7 2v20"/>
+                <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+            </svg>
+        );
+        
+        const Coffee = ({ className, size = 24 }) => (
+            <svg className={`lucide ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                <path d="M17 8h1a4 4 0 1 1 0 8h-1"/>
+                <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>
+                <line x1="6" y1="2" x2="6" y2="4"/>
+                <line x1="10" y1="2" x2="10" y2="4"/>
+                <line x1="14" y1="2" x2="14" y2="4"/>
+            </svg>
+        );
+        
+        const ShoppingBag = ({ className, size = 24 }) => (
+            <svg className={`lucide ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/>
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+        );
+        
+        const Wine = ({ className, size = 24 }) => (
+            <svg className={`lucide ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                <path d="M8 22h8"/>
+                <path d="M12 11v11"/>
+                <path d="M12 2v9"/>
+                <path d="M5 2h14l-2 7H7L5 2z"/>
+            </svg>
+        );
+        
+        const CheckCircle = ({ className, size = 24 }) => (
+            <svg className={`lucide ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22,4 12,14.01 9,11.01"/>
+            </svg>
+        );
+        
+        const AlertCircle = ({ className, size = 24 }) => (
+            <svg className={`lucide ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+        );
+        
+        const Sun = ({ className, size = 24 }) => (
+            <svg className={`lucide ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/>
+                <line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+        );
+        
+        const CloudRain = ({ className, size = 24 }) => (
+            <svg className={`lucide ${className}`} width={size} height={size} viewBox="0 0 24 24">
+                <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/>
+                <path d="M16 14v6"/>
+                <path d="M8 14v6"/>
+                <path d="M12 16v6"/>
+            </svg>
+        );
+
+        const HeartlandRoutePlanner = () => {
+            const [formData, setFormData] = useState({
+                neighborhood: '',
+                startTime: '10:00',
+                endTime: '16:00',
+                businessTypes: [],
+                workingDay: 'tuesday',
+                weatherConsideration: true,
+                includeBackups: true
+            });
+            
+            const [schedule, setSchedule] = useState(null);
+            const [weather, setWeather] = useState({ condition: 'sunny', temp: 75 });
+            const [followUpTasks, setFollowUpTasks] = useState([]);
+
+            const neighborhoods = [
+                'Montrose', 'Heights', 'Midtown', 'River Oaks', 'West University', 'Rice Village',
+                'Museum District', 'Medical Center', 'Third Ward', 'Fourth Ward', 'Fifth Ward',
+                'East End', 'Second Ward', 'Downtown', 'Market Square', 'EaDo', 'South End',
+                'Neartown', 'Hyde Park', 'Cottage Grove', 'Norhill', 'Garden Oaks',
+                'Shady Acres', 'Lazybrook', 'Timbergrove', 'Independence Heights', 'Oak Forest'
+            ];
+
+            const businessTypes = [
+                { id: 'restaurants', name: 'Restaurants', icon: Utensils, color: 'bg-red-100 text-red-800', priority: 'primary' },
+                { id: 'coffee', name: 'Coffee Shops', icon: Coffee, color: 'bg-amber-100 text-amber-800', priority: 'primary' },
+                { id: 'retail', name: 'Retail Stores', icon: ShoppingBag, color: 'bg-blue-100 text-blue-800', priority: 'primary' },
+                { id: 'bars', name: 'Bars/Wine Bars', icon: Wine, color: 'bg-purple-100 text-purple-800', priority: 'primary' },
+                { id: 'medical', name: 'Medical/Dental/Vision', icon: ShoppingBag, color: 'bg-green-100 text-green-800', priority: 'secondary' },
+                { id: 'petcare', name: 'Pet Care/Pet Stores', icon: ShoppingBag, color: 'bg-teal-100 text-teal-800', priority: 'secondary' },
+                { id: 'automotive', name: 'Auto/Motorcycle Services', icon: ShoppingBag, color: 'bg-orange-100 text-orange-800', priority: 'secondary' },
+                { id: 'wellness', name: 'Beauty/Wellness/Spa', icon: ShoppingBag, color: 'bg-pink-100 text-pink-800', priority: 'secondary' },
+                { id: 'services', name: 'Professional Services', icon: ShoppingBag, color: 'bg-gray-100 text-gray-800', priority: 'secondary' }
+            ];
+
+            const optimalTimes = {
+                restaurants: { best: '2:30-4:30 PM', avoid: '11:30 AM-2:00 PM, 5:30-8:30 PM' },
+                coffee: { best: '1:30-3:30 PM', avoid: '7:00-9:30 AM, 11:30 AM-1:00 PM' },
+                retail: { best: '11:00 AM-2:00 PM', avoid: '5:00-7:00 PM, Weekends' },
+                bars: { best: '2:00-4:00 PM', avoid: '5:00-8:00 PM, Thu-Sat evenings' },
+                medical: { best: '11:00 AM-12:00 PM, 2:00-3:00 PM', avoid: '9:00-11:00 AM, 1:00-2:00 PM' },
+                petcare: { best: '11:00 AM-1:00 PM, 2:00-4:00 PM', avoid: '8:00-10:00 AM, 5:00-7:00 PM' },
+                automotive: { best: '10:00 AM-12:00 PM, 2:00-4:00 PM', avoid: '8:00-9:00 AM, 4:30-6:00 PM' },
+                wellness: { best: '11:00 AM-1:00 PM, 3:00-4:00 PM', avoid: '9:00-10:00 AM, 5:00-7:00 PM' },
+                services: { best: '10:00 AM-12:00 PM, 2:00-4:00 PM', avoid: '8:00-9:00 AM, 4:00-5:00 PM' }
+            };
+
+            const sampleProspects = {
+                'Montrose': [
+                    { name: 'Little Dreamer Coffee', type: 'coffee', address: '1953 Montrose Blvd', priority: 'high', owner: 'Matt Toomey' },
+                    { name: 'Inversion Coffee & Art', type: 'coffee', address: '1953 Montrose Blvd', priority: 'high', owner: 'Unknown' },
+                    { name: 'Black Hole Coffee', type: 'coffee', address: '2504 Dunlavy St', priority: 'medium', owner: 'Unknown' },
+                    { name: 'Hugos Restaurant', type: 'restaurants', address: '1600 Westheimer', priority: 'high', owner: 'Hugo Ortega' },
+                    { name: 'Anvil Bar & Refuge', type: 'bars', address: '1424 Westheimer', priority: 'medium', owner: 'Unknown' },
+                    { name: 'Vintage Boutique', type: 'retail', address: '1520 Westheimer', priority: 'medium', owner: 'Unknown' },
+                    { name: 'Montrose Family Dentistry', type: 'medical', address: '1234 Montrose Blvd', priority: 'low', owner: 'Dr. Smith' },
+                    { name: 'Westheimer Auto Care', type: 'automotive', address: '1500 Westheimer', priority: 'low', owner: 'Mike Johnson' },
+                    { name: 'Montrose Day Spa', type: 'wellness', address: '1300 Montrose Blvd', priority: 'low', owner: 'Lisa Chen' },
+                    { name: 'Pawsitive Pet Store', type: 'petcare', address: '2000 W Gray St', priority: 'low', owner: 'Dr. Williams' }
+                ],
+                'Heights': [
+                    { name: 'Local Foods', type: 'restaurants', address: '5740 San Felipe', priority: 'high', owner: 'Unknown' },
+                    { name: 'Blacksmith Coffee', type: 'coffee', address: '1018 Studewood St', priority: 'high', owner: 'Unknown' },
+                    { name: 'Revival Market', type: 'retail', address: '550 Heights Blvd', priority: 'medium', owner: 'Unknown' },
+                    { name: 'Better Luck Tomorrow', type: 'bars', address: '544 Yale St', priority: 'medium', owner: 'Unknown' },
+                    { name: 'Heights Vision Center', type: 'medical', address: '123 Heights Blvd', priority: 'low', owner: 'Dr. Jones' },
+                    { name: 'Heights Pet Hospital', type: 'petcare', address: '456 Yale St', priority: 'low', owner: 'Dr. Brown' },
+                    { name: 'Heights Wellness Studio', type: 'wellness', address: '789 19th St', priority: 'low', owner: 'Jenny Kim' },
+                    { name: 'Heights Auto Clinic', type: 'automotive', address: '321 Heights Blvd', priority: 'low', owner: 'Carlos Rodriguez' }
+                ],
+                'Rice Village': [
+                    { name: 'Village Bistro', type: 'restaurants', address: '2540 University Blvd', priority: 'high', owner: 'Unknown' },
+                    { name: 'Rice Coffeehouse', type: 'coffee', address: '2100 University Blvd', priority: 'high', owner: 'Unknown' },
+                    { name: 'Village Boutique', type: 'retail', address: '2519 Rice Blvd', priority: 'medium', owner: 'Unknown' },
+                    { name: 'Village Pub', type: 'bars', address: '2415 Rice Blvd', priority: 'medium', owner: 'Unknown' },
+                    { name: 'Rice Dental Associates', type: 'medical', address: '2400 Rice Blvd', priority: 'low', owner: 'Dr. Martinez' },
+                    { name: 'Village Pet Clinic', type: 'petcare', address: '2300 University Blvd', priority: 'low', owner: 'Dr. Kim' }
+                ]
+            };
+
+            const handleInputChange = (field, value) => {
+                setFormData(prev => ({ ...prev, [field]: value }));
+            };
+
+            const handleBusinessTypeChange = (typeId) => {
+                setFormData(prev => ({
+                    ...prev,
+                    businessTypes: prev.businessTypes.includes(typeId)
+                        ? prev.businessTypes.filter(t => t !== typeId)
+                        : [...prev.businessTypes, typeId]
+                }));
+            };
+
+            const generateSchedule = () => {
+                const weatherConditions = ['sunny', 'cloudy', 'rainy', 'hot'];
+                const currentWeather = {
+                    condition: weatherConditions[Math.floor(Math.random() * weatherConditions.length)],
+                    temp: Math.floor(Math.random() * 30) + 65
+                };
+                setWeather(currentWeather);
+
+                const selectedProspects = sampleProspects[formData.neighborhood] || [];
+                let filteredProspects = selectedProspects.filter(p => 
+                    formData.businessTypes.length === 0 || formData.businessTypes.includes(p.type)
+                );
+
+                const primaryProspects = filteredProspects.filter(p => {
+                    const businessType = businessTypes.find(bt => bt.id === p.type);
+                    return businessType && businessType.priority === 'primary';
+                });
+
+                const secondaryProspects = filteredProspects.filter(p => {
+                    const businessType = businessTypes.find(bt => bt.id === p.type);
+                    return businessType && businessType.priority === 'secondary';
+                });
+
+                if (formData.includeBackups && secondaryProspects.length > 0) {
+                    filteredProspects = [...primaryProspects, ...secondaryProspects.slice(0, 3)];
+                } else {
+                    filteredProspects = primaryProspects;
+                }
+
+                if (currentWeather.condition === 'rainy' && formData.weatherConsideration) {
+                    filteredProspects = filteredProspects.map(p => ({
+                        ...p,
+                        weatherNote: p.type === 'restaurants' ? 'Indoor seating preferred due to rain' : null
+                    }));
+                }
+
+                if (currentWeather.temp > 90 && formData.weatherConsideration) {
+                    filteredProspects = filteredProspects.map(p => ({
+                        ...p,
+                        weatherNote: 'Hot weather - shorter visits recommended'
+                    }));
+                }
+
+                if (filteredProspects.length === 0) {
+                    alert('No prospects found for selected criteria. Try different neighborhood or business types.');
+                    return;
+                }
+
+                const timeSlots = generateTimeSlots();
+                const scheduledVisits = scheduleVisits(filteredProspects, timeSlots);
+                
+                setSchedule({
+                    date: new Date().toLocaleDateString(),
+                    neighborhood: formData.neighborhood,
+                    totalProspects: filteredProspects.length,
+                    primaryProspects: primaryProspects.length,
+                    backupProspects: secondaryProspects.length,
+                    estimatedDuration: calculateDuration(scheduledVisits),
+                    visits: scheduledVisits,
+                    mapUrl: generateMapUrl(scheduledVisits),
+                    weatherAlert: getWeatherAlert(currentWeather)
+                });
+            };
+
+            const generateTimeSlots = () => {
+                const slots = [];
+                const start = parseInt(formData.startTime.split(':')[0]);
+                const end = parseInt(formData.endTime.split(':')[0]);
+                
+                for (let hour = start; hour < end; hour++) {
+                    for (let minute = 0; minute < 60; minute += 30) {
+                        const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                        slots.push(timeStr);
+                    }
+                }
+                return slots;
+            };
+
+            const scheduleVisits = (prospects, timeSlots) => {
+                const visits = [];
+                let currentSlot = 0;
+
+                const sortedProspects = prospects.sort((a, b) => {
+                    const priorityOrder = { high: 3, medium: 2, low: 1 };
+                    const businessTypeA = businessTypes.find(bt => bt.id === a.type);
+                    const businessTypeB = businessTypes.find(bt => bt.id === b.type);
+                    
+                    if (businessTypeA?.priority !== businessTypeB?.priority) {
+                        return businessTypeA?.priority === 'primary' ? -1 : 1;
+                    }
+                    
+                    const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
+                    if (priorityDiff !== 0) return priorityDiff;
+                    
+                    return 0;
+                });
+
+                sortedProspects.forEach((prospect) => {
+                    if (currentSlot >= timeSlots.length) return;
+                    
+                    const optimalTime = getOptimalTimeForBusiness(prospect.type, timeSlots, currentSlot);
+                    const businessType = businessTypes.find(bt => bt.id === prospect.type);
+                    
+                    const visit = {
+                        ...prospect,
+                        scheduledTime: timeSlots[optimalTime],
+                        duration: businessType?.priority === 'secondary' ? 15 : 20,
+                        notes: getVisitNotes(prospect.type),
+                        status: 'planned',
+                        businessPriority: businessType?.priority || 'primary'
+                    };
+                    
+                    visits.push(visit);
+                    currentSlot = optimalTime + 1;
+                });
+
+                return visits;
+            };
+
+            const getOptimalTimeForBusiness = (businessType, slots, startIndex) => {
+                const currentHour = parseInt(slots[startIndex].split(':')[0]);
+                
+                const timeRanges = {
+                    coffee: [13, 14, 15],
+                    restaurants: [14, 15, 16],
+                    retail: [11, 12, 13, 14],
+                    bars: [14, 15, 16],
+                    medical: [11, 12, 14, 15],
+                    petcare: [11, 12, 13, 14, 15, 16],
+                    automotive: [10, 11, 12, 14, 15, 16],
+                    wellness: [11, 12, 13, 15, 16],
+                    services: [10, 11, 12, 14, 15, 16]
+                };
+                
+                const ranges = timeRanges[businessType] || [10, 11, 12, 13, 14, 15, 16];
+                
+                if (ranges.includes(currentHour)) return startIndex;
+                
+                for (let i = startIndex; i < slots.length; i++) {
+                    const hour = parseInt(slots[i].split(':')[0]);
+                    if (ranges.includes(hour)) return i;
+                }
+                
+                return startIndex;
+            };
+
+            const getVisitNotes = (businessType) => {
+                const notes = {
+                    coffee: 'Look for: Owner during shift change, avoid morning/lunch rush',
+                    restaurants: 'Look for: Manager doing prep between rushes',
+                    retail: 'Look for: Owner/manager during steady (not peak) hours',
+                    bars: 'Look for: Owner/manager before happy hour setup',
+                    medical: 'Look for: Office manager between patient appointments',
+                    petcare: 'Look for: Practice manager during quiet hours',
+                    automotive: 'Look for: Shop owner/manager during regular business hours',
+                    wellness: 'Look for: Salon owner/manager between client appointments',
+                    services: 'Look for: Business owner during standard operating hours'
+                };
+                return notes[businessType] || 'Standard business visit';
+            };
+
+            const getWeatherAlert = (weather) => {
+                if (weather.condition === 'rainy') {
+                    return { type: 'warning', message: 'Rainy weather - consider indoor locations and bring umbrella' };
+                }
+                if (weather.temp > 90) {
+                    return { type: 'warning', message: 'Hot weather - plan shorter visits and stay hydrated' };
+                }
+                if (weather.temp < 40) {
+                    return { type: 'info', message: 'Cold weather - dress warmly for outdoor visits' };
+                }
+                return { type: 'success', message: 'Good weather for prospecting!' };
+            };
+
+            const handleVisitOutcome = (visitIndex, outcome, notes) => {
+                const visit = schedule.visits[visitIndex];
+                const followUpDate = new Date();
+                
+                let followUpAction = '';
+                let followUpDays = 0;
+                
+                switch (outcome) {
+                    case 'interested':
+                        followUpAction = 'Send detailed proposal and schedule demo';
+                        followUpDays = 1;
+                        break;
+                    case 'neutral':
+                        followUpAction = 'Send informational email and follow up';
+                        followUpDays = 3;
+                        break;
+                    case 'not_available':
+                        followUpAction = 'Schedule return visit or call';
+                        followUpDays = 1;
+                        break;
+                    case 'not_interested':
+                        followUpAction = 'Add to long-term follow up list';
+                        followUpDays = 90;
+                        break;
+                    default:
+                        followUpAction = 'Standard follow up';
+                        followUpDays = 7;
+                }
+                
+                followUpDate.setDate(followUpDate.getDate() + followUpDays);
+                
+                const newTask = {
+                    id: Date.now(),
+                    business: visit.name,
+                    action: followUpAction,
+                    dueDate: followUpDate.toLocaleDateString(),
+                    priority: outcome === 'interested' ? 'high' : outcome === 'neutral' ? 'medium' : 'low',
+                    notes: notes,
+                    outcome: outcome
+                };
+                
+                setFollowUpTasks(prev => [...prev, newTask]);
+                
+                const updatedSchedule = { ...schedule };
+                updatedSchedule.visits[visitIndex].status = 'completed';
+                updatedSchedule.visits[visitIndex].outcome = outcome;
+                updatedSchedule.visits[visitIndex].outcomeNotes = notes;
+                setSchedule(updatedSchedule);
+            };
+
+            const calculateDuration = (visits) => {
+                const totalMinutes = visits.length * 20 + (visits.length - 1) * 10;
+                const hours = Math.floor(totalMinutes / 60);
+                const minutes = totalMinutes % 60;
+                return `${hours}h ${minutes}m`;
+            };
+
+            const generateMapUrl = (visits) => {
+                if (visits.length === 0) return '';
+                const addresses = visits.map(v => encodeURIComponent(v.address)).join('/');
+                return `https://www.google.com/maps/dir/${addresses}`;
+            };
+
+            const getBusinessIcon = (type) => {
+                const business = businessTypes.find(b => b.id === type);
+                return business ? business.icon : ShoppingBag;
+            };
+
+            const getBusinessColor = (type) => {
+                const business = businessTypes.find(b => b.id === type);
+                return business ? business.color : 'bg-gray-100 text-gray-800';
+            };
+
+            return (
+                <div className="container">
+                    <div className="mb-8">
+                        <h1 className="text-3xl font-bold text-gray-900 mb-2">Heartland POS - Daily Route Planner</h1>
+                        <p className="text-gray-600">Generate optimized sales routes based on business types and optimal visit times</p>
+                    </div>
+
+                    <div className="grid desktop-grid md:grid-cols-2 gap-8">
+                        <div className="bg-gray-50 p-6 rounded-lg">
+                            <h2 className="text-xl font-semibold mb-4 flex items-center">
+                                <Calendar className="mr-2 text-blue-600" size={24} />
+                                Schedule Parameters
+                            </h2>
+
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Target Neighborhood</label>
+                                <select 
+                                    value={formData.neighborhood} 
+                                    onChange={(e) => handleInputChange('neighborhood', e.target.value)}
+                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                    <option value="">Select Neighborhood</option>
+                                    {neighborhoods.map(n => (
+                                        <option key={n} value={n}>{n}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
+                                    <input 
+                                        type="time" 
+                                        value={formData.startTime}
+                                        onChange={(e) => handleInputChange('startTime', e.target.value)}
+                                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">End Time</label>
+                                    <input 
+                                        type="time" 
+                                        value={formData.endTime}
+                                        onChange={(e) => handleInputChange('endTime', e.target.value)}
+                                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Business Types</label>
+                                <div className="space-y-2">
+                                    <div className="text-sm font-medium text-gray-600">Primary Targets:</div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {businessTypes.filter(type => type.priority === 'primary').map(type => {
+                                            const Icon = type.icon;
+                                            return (
+                                                <label key={type.id} className="flex items-center p-2 border rounded-md hover:bg-gray-100 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.businessTypes.includes(type.id)}
+                                                        onChange={() => handleBusinessTypeChange(type.id)}
+                                                        className="mr-2"
+                                                    />
+                                                    <Icon size={16} className="mr-1" />
+                                                    <span className="text-sm">{type.name}</span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                    
+                                    <div className="text-sm font-medium text-gray-600 mt-3">Secondary/Backup Targets:</div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {businessTypes.filter(type => type.priority === 'secondary').map(type => {
+                                            const Icon = type.icon;
+                                            return (
+                                                <label key={type.id} className="flex items-center p-2 border rounded-md hover:bg-gray-100 cursor-pointer bg-gray-50">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.businessTypes.includes(type.id)}
+                                                        onChange={() => handleBusinessTypeChange(type.id)}
+                                                        className="mr-2"
+                                                    />
+                                                    <Icon size={16} className="mr-1" />
+                                                    <span className="text-sm text-gray-600">{type.name}</span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                <label className="flex items-center p-2 border rounded-md hover:bg-gray-100 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.weatherConsideration}
+                                        onChange={(e) => handleInputChange('weatherConsideration', e.target.checked)}
+                                        className="mr-2"
+                                    />
+                                    <span className="text-sm">Weather Considerations</span>
+                                </label>
+                                <label className="flex items-center p-2 border rounded-md hover:bg-gray-100 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.includeBackups}
+                                        onChange={(e) => handleInputChange('includeBackups', e.target.checked)}
+                                        className="mr-2"
+                                    />
+                                    <span className="text-sm">Include Backup Prospects</span>
+                                </label>
+                            </div>
+
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Preferred Day</label>
+                                <select 
+                                    value={formData.workingDay}
+                                    onChange={(e) => handleInputChange('workingDay', e.target.value)}
+                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="tuesday">Tuesday (Recommended)</option>
+                                    <option value="wednesday">Wednesday (Recommended)</option>
+                                    <option value="thursday">Thursday (Good)</option>
+                                    <option value="monday">Monday (Fair)</option>
+                                    <option value="friday">Friday (Avoid)</option>
+                                </select>
+                            </div>
+
+                            <button 
+                                onClick={generateSchedule}
+                                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200 flex items-center justify-center"
+                            >
+                                <Navigation className="mr-2" size={20} />
+                                Generate Optimized Route
+                            </button>
+                        </div>
+
+                        <div className="bg-yellow-50 p-6 rounded-lg">
+                            <h2 className="text-xl font-semibold mb-4 flex items-center">
+                                <Clock className="mr-2 text-yellow-600" size={24} />
+                                Optimal Visit Times
+                            </h2>
+                            
+                            {businessTypes.map(type => {
+                                const Icon = type.icon;
+                                const times = optimalTimes[type.id];
+                                return (
+                                    <div key={type.id} className="mb-4 p-3 bg-white rounded-md border">
+                                        <div className="flex items-center mb-2">
+                                            <Icon size={16} className="mr-2" />
+                                            <span className="font-medium">{type.name}</span>
+                                            {type.priority === 'secondary' && (
+                                                <span className="ml-2 px-1 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">Backup</span>
+                                            )}
+                                        </div>
+                                        <div className="text-sm text-gray-600">
+                                            <div className="flex items-center mb-1">
+                                                <CheckCircle size={12} className="mr-1 text-green-500" />
+                                                Best: {times.best}
+                                            </div>
+                                            <div className="flex items-center">
+                                                <AlertCircle size={12} className="mr-1 text-red-500" />
+                                                Avoid: {times.avoid}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {schedule && (
+                        <div className="mt-8 bg-green-50 p-6 rounded-lg">
+                            <h2 className="text-xl font-semibold mb-4 flex items-center">
+                                <MapPin className="mr-2 text-green-600" size={24} />
+                                Generated Route - {schedule.neighborhood}
+                            </h2>
+                            
+                            {schedule.weatherAlert && (
+                                <div className={`mb-4 p-3 rounded-md border flex items-center ${
+                                    schedule.weatherAlert.type === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
+                                    schedule.weatherAlert.type === 'info' ? 'bg-blue-50 border-blue-200 text-blue-800' :
+                                    'bg-green-50 border-green-200 text-green-800'
+                                }`}>
+                                    {weather.condition === 'rainy' ? <CloudRain size={16} className="mr-2" /> : <Sun size={16} className="mr-2" />}
+                                    <div>
+                                        <span className="font-medium">Weather Update:</span>
+                                        <div className="text-sm">
+                                            {weather.condition.charAt(0).toUpperCase() + weather.condition.slice(1)}, {weather.temp}°F - {schedule.weatherAlert.message}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            <div className="grid desktop-grid md:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-white p-4 rounded-md border">
+                                    <div className="font-medium text-gray-900">{schedule.primaryProspects} Primary</div>
+                                    <div className="text-sm text-gray-600">High-priority targets</div>
+                                </div>
+                                <div className="bg-white p-4 rounded-md border">
+                                    <div className="font-medium text-gray-900">{schedule.backupProspects} Backup</div>
+                                    <div className="text-sm text-gray-600">Secondary prospects</div>
+                                </div>
+                                <div className="bg-white p-4 rounded-md border">
+                                    <div className="font-medium text-gray-900">{schedule.estimatedDuration}</div>
+                                    <div className="text-sm text-gray-600">Estimated duration</div>
+                                </div>
+                                <div className="bg-white p-4 rounded-md border">
+                                    <div className="font-medium text-gray-900">{schedule.date}</div>
+                                    <div className="text-sm text-gray-600">Scheduled date</div>
+                                </div>
+                            </div>
+
+                            <div className="mb-6">
+                                <a 
+                                    href={schedule.mapUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-200"
+                                >
+                                    <Navigation className="mr-2" size={16} />
+                                    Open Route in Google Maps
+                                </a>
+                            </div>
+
+                            <div className="space-y-3">
+                                {schedule.visits.map((visit, index) => {
+                                    const Icon = getBusinessIcon(visit.type);
+                                    const businessType = businessTypes.find(bt => bt.id === visit.type);
+                                    return (
+                                        <div key={index} className="bg-white p-4 rounded-md border">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center">
+                                                    <div className="bg-blue-100 text-blue-800 rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium mr-3">
+                                                        {index + 1}
+                                                    </div>
+                                                    <Icon className="mr-2" size={16} />
+                                                    <div>
+                                                        <div className="font-medium flex items-center">
+                                                            {visit.name}
+                                                            {businessType?.priority === 'secondary' && (
+                                                                <span className="ml-2 px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">Backup</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-sm text-gray-600">{visit.address}</div>
+                                                        {visit.owner !== 'Unknown' && (
+                                                            <div className="text-xs text-gray-500">Owner: {visit.owner}</div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="font-medium text-blue-600">{visit.scheduledTime}</div>
+                                                    <div className={`inline-block px-2 py-1 rounded-full text-xs ${getBusinessColor(visit.type)}`}>
+                                                        {businessTypes.find(b => b.id === visit.type)?.name}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="text-xs text-gray-500 mb-2">{visit.notes}</div>
+                                            
+                                            {visit.weatherNote && (
+                                                <div className="text-xs text-yellow-600 bg-yellow-50 p-2 rounded mb-2">
+                                                    {visit.weatherNote}
+                                                </div>
+                                            )}
+                                            
+                                            {visit.status === 'planned' && (
+                                                <div className="flex gap-2 mt-3 mobile-stack">
+                                                    <button
+                                                        onClick={() => handleVisitOutcome(index, 'interested', 'Showed strong interest in demo')}
+                                                        className="px-3 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
+                                                    >
+                                                        Interested
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleVisitOutcome(index, 'neutral', 'Need more information')}
+                                                        className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded text-xs hover:bg-yellow-200"
+                                                    >
+                                                        Neutral
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleVisitOutcome(index, 'not_available', 'Manager not available')}
+                                                        className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
+                                                    >
+                                                        Not Available
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleVisitOutcome(index, 'not_interested', 'Not interested at this time')}
+                                                        className="px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                                                    >
+                                                        Not Interested
+                                                    </button>
+                                                </div>
+                                            )}
+                                            
+                                            {visit.status === 'completed' && (
+                                                <div className={`mt-2 p-2 rounded text-xs ${
+                                                    visit.outcome === 'interested' ? 'bg-green-50 text-green-700' :
+                                                    visit.outcome === 'neutral' ? 'bg-yellow-50 text-yellow-700' :
+                                                    visit.outcome === 'not_available' ? 'bg-blue-50 text-blue-700' :
+                                                    'bg-red-50 text-red-700'
+                                                }`}>
+                                                    ✓ Completed - {visit.outcome.replace('_', ' ').toUpperCase()}
+                                                    {visit.outcomeNotes && <div className="mt-1">{visit.outcomeNotes}</div>}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {followUpTasks.length > 0 && (
+                        <div className="mt-8 bg-blue-50 p-6 rounded-lg">
+                            <h2 className="text-xl font-semibold mb-4 flex items-center">
+                                <Calendar className="mr-2 text-blue-600" size={24} />
+                                Follow-up Tasks ({followUpTasks.length})
+                            </h2>
+                            
+                            <div className="space-y-3">
+                                {followUpTasks.map(task => (
+                                    <div key={task.id} className="bg-white p-4 rounded-md border">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <div className="font-medium">{task.business}</div>
+                                                <div className="text-sm text-gray-600">{task.action}</div>
+                                                {task.notes && <div className="text-xs text-gray-500 mt-1">{task.notes}</div>}
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-sm font-medium">{task.dueDate}</div>
+                                                <div className={`inline-block px-2 py-1 rounded-full text-xs ${
+                                                    task.priority === 'high' ? 'bg-red-100 text-red-700' :
+                                                    task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                                    'bg-gray-100 text-gray-700'
+                                                }`}>
+                                                    {task.priority.toUpperCase()} Priority
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<HeartlandRoutePlanner />);
+    </script>
+</body>
+</html>
